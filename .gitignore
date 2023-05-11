@@ -1,0 +1,5 @@
+*.log
+Data*/*
+Results_*/*
+DB*/*
+Results_*
