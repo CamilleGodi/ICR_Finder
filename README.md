@@ -22,7 +22,7 @@ This pipeline allows for **automatic and throughout research of chemoreceptors g
 
 It can also be adapted to run with custom databases (see part IV/), and supposedly on different animal taxa and gene families (see part V/).
 
-This pipeline is an adaptation and generalisation based on a vertebrates V2R-receptors finder pipeline created by Maxime Policarpo, notably used to generate analysis for *"Coevolution of the olfactory organ and its receptor repertoire in ray-finned fishes"* (BMC Biol., 2022, DOI: 10.1186/s12915-022-01397-x). I thank him for the original scripts and for the precious help.
+This pipeline is an adaptation and generalisation based on a vertebrates V2R-receptors finder pipeline created by Maxime Policarpo, notably used to generate analysis for *"Coevolution of the olfactory organ and its receptor repertoire in ray-finned fishes"* (BMC Biol., 2022, DOI: 10.1186/s12915-022-01397-x) and other articles. I thank him for the original scripts and for the precious help.
 
 # II/ Intructions
 
