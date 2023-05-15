@@ -1433,8 +1433,8 @@ nb_pseudo_filtered=$( if test -f "FINAL_Pseudogenes_and_no_7tm.fa" ; then grep -
 
 nb_ambiguous=$( if test -f "FINAL_Ambiguous.fa" ; then grep -c ">" FINAL_Ambiguous.fa ; else echo 0 ; fi )
 
-nb_truncated=$( if test -f "FINAL_Pseudogenes_and_no_7tm.fa" ; then grep -c "exons-FALSE-FALSE-FALSE" FINAL_Pseudogenes_and_no_7tm.fa ; else echo 0 ; fi )
-nb_edges=$( if test -f "FINAL_Pseudogenes_and_no_7tm.fa" ; then grep -c "exons-TRUE" FINAL_Pseudogenes_and_no_7tm.fa ; else echo 0 ; fi )
+nb_truncated=$( if test -f "FINAL_Pseudogenes_no_filter.fa" ; then grep -c "exons-FALSE-FALSE-FALSE" FINAL_Pseudogenes_no_filter.fa ; else echo 0 ; fi )
+nb_edges=$( if test -f "FINAL_Pseudogenes_no_filter.fa" ; then grep -c "exons-TRUE" FINAL_Pseudogenes_no_filter.fa ; else echo 0 ; fi )
 nb_stop_fs=$(( $nb_pseudo - $nb_edges - $nb_truncated ))
 
 ### Add line to the results file
