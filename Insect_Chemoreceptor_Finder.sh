@@ -1291,7 +1291,7 @@ xargs samtools faidx Potential_multiple_exon_CDS.fa < target_functionnal.id > Fu
 xargs samtools faidx Pseudogenes_multiple_exon_reformat.fa < target_pseudos.id > Pseudogenes_target_genes.fa
 
 
-## Now lets filter these files : remove ambigous sequences 
+## Now lets filter these files : remove ambiguous sequences 
 awk '/^>/ {printf("%s%s\t",(N>0?"\n":""),$0);N++;next;} {printf("%s",$0);} END {printf("\n");}' Functionnal_target_genes.fa | sed 's/\*$//g' | awk -F '\t'  '!($2 ~ /N/)' | tr "\t" "\n" > clear_Functionnal_target_genes.fa
 awk '/^>/ {printf("%s%s\t",(N>0?"\n":""),$0);N++;next;} {printf("%s",$0);} END {printf("\n");}' Pseudogenes_target_genes.fa | sed 's/\*$//g' | awk -F '\t'  '!($2 ~ /N/)' | tr "\t" "\n" > clear_Pseudogenes_target_genes.fa
 awk '/^>/ {printf("%s%s\t",(N>0?"\n":""),$0);N++;next;} {printf("%s",$0);} END {printf("\n");}' Functionnal_target_genes.fa | sed 's/\*$//g' | awk -F '\t'  '($2 ~ /N/)' | tr "\t" "\n" > unclear_Functionnal_target_genes.fa
@@ -1394,11 +1394,11 @@ Rscript "$scripts_location"/Remove_redundancy.R
 IFS=$'\n'
 
 for line in $( cat best_genes_functionnal.tsv ) ; do scaff=$( echo "$line" | cut -f1 ) ; start=$( echo "$line" | cut -f2 ) ; end=$( echo "$line" | cut -f3 ) ; grep -m1 "$scaff.*$start.*$end" clear_Functionnal_target_genes_uniq.fa | sed 's/>//g' >> functionnal_to_keep.txt ; done
-for line in $( cat best_genes_ambigous.tsv ) ; do scaff=$( echo "$line" | cut -f1 ) ; start=$( echo "$line" | cut -f2 ) ; end=$( echo "$line" | cut -f3 ) ; grep -m1 "$scaff.*$start.*$end" FINAL_Ambiguous_target_uniq.fa | sed 's/>//g' >> ambigous_to_keep.txt ; done
+for line in $( cat best_genes_ambiguous.tsv ) ; do scaff=$( echo "$line" | cut -f1 ) ; start=$( echo "$line" | cut -f2 ) ; end=$( echo "$line" | cut -f3 ) ; grep -m1 "$scaff.*$start.*$end" FINAL_Ambiguous_target_uniq.fa | sed 's/>//g' >> ambiguous_to_keep.txt ; done
 for line in $( cat best_genes_pseudogenes.tsv ) ; do scaff=$( echo "$line" | cut -f1 ) ; start=$( echo "$line" | cut -f2 ) ; end=$( echo "$line" | cut -f3 ) ; grep -m1 "$scaff.*$start.*$end" clear_Pseudogenes_target_genes_uniq.fa | sed 's/>//g' >> pseudogenes_to_keep.txt ; done
 
 if test -f "functionnal_to_keep.txt" ; then xargs samtools faidx clear_Functionnal_target_genes_uniq.fa < functionnal_to_keep.txt > clear_Functionnal_target_genes.fa ; else echo "" > clear_Functionnal_target_genes.fa ; fi 
-if test -f "ambigous_to_keep.txt" ; then xargs samtools faidx FINAL_Ambiguous_target_uniq.fa < ambigous_to_keep.txt > FINAL_Ambiguous.fa ; else echo "" > FINAL_Ambiguous.fa ; fi 
+if test -f "ambiguous_to_keep.txt" ; then xargs samtools faidx FINAL_Ambiguous_target_uniq.fa < ambiguous_to_keep.txt > FINAL_Ambiguous.fa ; else echo "" > FINAL_Ambiguous.fa ; fi 
 if test -f "pseudogenes_to_keep.txt" ; then xargs samtools faidx clear_Pseudogenes_target_genes_uniq.fa < pseudogenes_to_keep.txt > clear_Pseudogenes_target_genes.fa ; else echo "" > clear_Pseudogenes_target_genes.fa ; fi 
 
 

@@ -11,9 +11,9 @@ if (file.exists("Coordinates_genes_final.tsv")){
 } else functionnal_genes <- as.data.frame(matrix(ncol = 3, nrow = 0))
 
 
-if (file.exists("Coordinates_ambigous_final.tsv")){
-	ambigous_genes <- read.table("Coordinates_ambigous_final.tsv", header=FALSE, sep="\t")
-} else ambigous_genes <- as.data.frame(matrix(ncol = 3, nrow = 0))
+if (file.exists("Coordinates_ambiguous_final.tsv")){
+	ambiguous_genes <- read.table("Coordinates_ambiguous_final.tsv", header=FALSE, sep="\t")
+} else ambiguous_genes <- as.data.frame(matrix(ncol = 3, nrow = 0))
 
 
 if (file.exists("Coordinates_pseudogenes_final.tsv")){
@@ -23,7 +23,7 @@ if (file.exists("Coordinates_pseudogenes_final.tsv")){
 
 #rename columns
 colnames(functionnal_genes) <- c("seqnames", "true_start", "true_end")
-colnames(ambigous_genes) <- c("seqnames", "true_start", "true_end")
+colnames(ambiguous_genes) <- c("seqnames", "true_start", "true_end")
 colnames(pseudo_genes) <- c("seqnames", "true_start", "true_end")
 
 
@@ -39,15 +39,15 @@ functionnal_genes <- functionnal_genes %>% mutate(end = case_when(
 functionnal_genes <- functionnal_genes %>% mutate(gene_state = "F")
 
 
-ambigous_genes <- ambigous_genes %>% mutate(start = case_when(
+ambiguous_genes <- ambiguous_genes %>% mutate(start = case_when(
   true_start < true_end ~ true_start,
   true_end < true_start ~ true_end
 ))
-ambigous_genes <- ambigous_genes %>% mutate(end = case_when(
+ambiguous_genes <- ambiguous_genes %>% mutate(end = case_when(
   true_start < true_end ~ true_end,
   true_end < true_start ~ true_start
 ))
-ambigous_genes <- ambigous_genes %>% mutate(gene_state = "A")
+ambiguous_genes <- ambiguous_genes %>% mutate(gene_state = "A")
 
 
 pseudo_genes <- pseudo_genes %>% mutate(start = case_when(
@@ -62,7 +62,7 @@ pseudo_genes <- pseudo_genes %>% mutate(gene_state = "P")
 
 
 #Merge the data tables
-all_genes_df <- do.call("rbind", list(functionnal_genes, pseudo_genes, ambigous_genes))
+all_genes_df <- do.call("rbind", list(functionnal_genes, pseudo_genes, ambiguous_genes))
 all_genes_df <- all_genes_df %>% mutate(length = end - start)
 
 
@@ -88,10 +88,10 @@ best_genes_df <- slice(all_genes_df, filtered_data)
 
 #Seperate table depending on gene state and export files
 best_genes_functionnal <- best_genes_df %>% filter(gene_state == "F")
-best_genes_ambigous <- best_genes_df %>% filter(gene_state == "A")
+best_genes_ambiguous <- best_genes_df %>% filter(gene_state == "A")
 best_genes_pseudogenes <- best_genes_df %>% filter(gene_state == "P")
 
 write.table(best_genes_functionnal, file="best_genes_functionnal.tsv", quote=FALSE, sep='\t', row.names = FALSE, col.names=FALSE)
-write.table(best_genes_ambigous, file="best_genes_ambigous.tsv", quote=FALSE, sep='\t', row.names = FALSE, col.names=FALSE)
+write.table(best_genes_ambiguous, file="best_genes_ambiguous.tsv", quote=FALSE, sep='\t', row.names = FALSE, col.names=FALSE)
 write.table(best_genes_pseudogenes, file="best_genes_pseudogenes.tsv", quote=FALSE, sep='\t', row.names = FALSE, col.names=FALSE)
 
