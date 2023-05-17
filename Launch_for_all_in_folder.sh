@@ -13,7 +13,7 @@ file_list=($( ls "$folder" ))
 
 for file in "${file_list[@]}" ; do
 
-    if ! grep -q ">" "$folder"/"$file" ; then 
+    if ! grep -q ">" "$folder/$file" ; then 
 
         echo "$file is not a nucleotidic fasta, on to next file" 
 
@@ -21,7 +21,7 @@ for file in "${file_list[@]}" ; do
 
         echo "File : $file"
 	
-       	./ICR_Finder_230510.sh "$folder/$file" DB_Bte_Obi_Nvi/DB_Bte_Obi_Nvi_OR_cdhit70.prot DB_Bte_Obi_Nvi/DB_Bte_Obi_Nvi_OR.prot DB_Bte_Obi_Nvi/DB_Bte_Obi_Nvi_OR_Ame_GR.prot DB_Bte_Obi_Nvi/DB_Bte_Obi_Nvi_OR_Ame_GR.aln Scripts 3000 40 False OR-Receptor -E |& tee "$file"_"$run_date".log
+       	bash Insect_Chemoreceptor_Finder.sh "$folder/$file" #### ADD THE END OF THE COMMAND HERE; all arguments after "genome_file" (excluded)
 
         # Delete all genome blast database files
         rm -f "$folder"/*.fna.*

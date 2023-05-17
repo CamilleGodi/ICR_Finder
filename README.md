@@ -4,6 +4,7 @@ II/ Intructions
 &nbsp;&nbsp;&nbsp;&nbsp;- A/ Before first use  
 &nbsp;&nbsp;&nbsp;&nbsp;- B/ Command details  
 &nbsp;&nbsp;&nbsp;&nbsp;- C/ Example  
+&nbsp;&nbsp;&nbsp;&nbsp;- D/ Launch all genomes in a folder  
 III/ Results  
 &nbsp;&nbsp;&nbsp;&nbsp;- A/ Files  
 &nbsp;&nbsp;&nbsp;&nbsp;- B/ Interpretation  
@@ -66,6 +67,14 @@ with:
 
 ## C/ Example
 TBA
+
+
+## D/ Launch all genomes in a folder
+To launch the pipeline with the same arguments for a set of genomes contained in a folder (*Folder_name*), substitute the comment of the 24th line in the "Launch_for_all_in_folder.sh" script by the rest of your arguments (see part IIB), then run :
+
+```bash
+bash Launch_for_all_in_folder.sh Folder_name
+```
 
 # III/ Results
 ## A/ Files
