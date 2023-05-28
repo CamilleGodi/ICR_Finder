@@ -133,6 +133,7 @@ Predicted genes are categorized as "Ambiguous" when they contain one or more N i
 ## A/ General notes
 - **max_intron_length** has to be adapted to your dataset to limit overlooking genes with long introns while not merging two close genes together.
 - Exonerate is used to identify potential chemoreceptor regions. It may take VERY long!
+- DeepTMHMM is currently (as of may 2023) not reliable for 7TM domain prediction.
 - If your genome file contains spaces, commas, dashes and/or colons in the sequence names, this pipeline will automatically replace them by underscores.
 
 ## B/ Notes for building custom databases and alignement files
