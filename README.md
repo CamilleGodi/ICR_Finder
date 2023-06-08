@@ -19,7 +19,7 @@ V/ Correspondance
 
 # I/ Introduction
 
-This pipeline allows for **automatic and throughout research of chemoreceptors genes/pseudogenes of various families (OR,GR,IR) in insect genomes**. "Database" files are provided.
+This pipeline, **Insect chemoreceptors Finder** (ICR_Finder) allows for **automatic and throughout research of chemoreceptors genes/pseudogenes of various families (OR,GR,IR) in insect genomes**. "Database" files are provided for OR research in Hymenoptera genomes.
 
 It can also be adapted to run with custom databases (see part IV/), and supposedly on different animal taxa and gene families (see part V/).
 
@@ -41,14 +41,14 @@ Then run this script to create the conda environment used by the pipeline :
 ```bash
 conda env create -f conda_chemoreceptor_pipeline.yml
 ```
-> **Note :** if the conda environment is installed on a custom path, you have to provide it to the *conda activate* command in the Insect_Chemoreceptor_Finder.sh script instead of "chemoreceptor_pipeline". If the custom-path-environment isn't in your working directory, you may have to disable the conda environment check in the beginning of the Insect_Chemoreceptor_Finder.sh script.
+> **Note :** if the conda environment is installed on a custom path, you have to provide it to the *conda activate* command in the ICR_Finder.sh script instead of "chemoreceptor_pipeline". If the custom-path-environment isn't in your working directory, you may have to disable the conda environment check in the beginning of the ICR_Finder.sh script.
 
 ---
 
 ## B/ Command details :
 
 ```bash
-bash Insect_Chemoreceptor_Finder.sh genome_file path/to/filtered_db path/to/full_db path/to/extended_db path/to/alignment_outgroup path/to/scripts max_intron_length threads_nb tmhmm_filter target_gene_family
+bash ICR_Finder.sh genome_file path/to/filtered_db path/to/full_db path/to/extended_db path/to/alignment_outgroup path/to/scripts max_intron_length threads_nb tmhmm_filter target_gene_family
 ```
 
 with:  
