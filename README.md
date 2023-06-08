@@ -54,19 +54,25 @@ bash ICR_Finder.sh genome_file path/to/filtered_db path/to/full_db path/to/exten
 with:  
 | Variable  |  Description |  Format |
 |-----------|--------------|---------|
-|  **genome_file** | (nucleic) fasta file of your genome | .fa  or .fna file|
-| **path/to/filtered_db** | path to the chemoreceptor database filtered by cd-hit (representative genes only), amino acid multifasta file | path to .prot, .fa or .faa file
-| **path/to/full_db** | path to the full chemoreceptor database, amino acid multifasta file | path to .prot, .fa or .faa file
-| **path/to/extended_db** | path to the full chemoreceptor database with outgroups, amino acid multifasta file | path to .prot or .faa file
-| **path/to/alignment_outgroup** | path to chemoreceptor-outgroups alignment (see part IV) | .aln file
-| **path/to/scripts** | path to the Scripts folder | folder path
+|  **genome_file** | path to the (nucleic) fasta file of your genome | .fa  or .fna file|
+| **filtered_db** | path to the chemoreceptor database filtered by cd-hit (representative genes only), amino acid multifasta file | path to .prot, .fa or .faa file
+| **full_db** | path to the full chemoreceptor database, amino acid multifasta file | path to .prot, .fa or .faa file
+| **extended_db** | path to the full chemoreceptor database with outgroups, amino acid multifasta file | path to .prot or .faa file
+| **alignment_outgroup** | path to chemoreceptor-outgroups alignment (see part IV) | .aln file
+| **scripts** | path to the Scripts folder | folder path
 | **max_intron_length** | maximum intron length tolerated (see part III) | integer |
 | **threads_nb** | number of CPU threads used for **Blast**, **Exonerate** and **IQTREE** | integer |
 | **7tm_prediction** | if True, adds a transmembrane regions prediction by **Phobius** and **DeepTMHMM**, and associated output files | Boolean : *True* or *False*
 | **target_gene_family** | **case sensitive**, term used in the sequence names of genes of the target family (i.e. : OR_receptor) | character string, only alphanumeric characters and underscores/dashes
 
-## C/ Example
-TBA
+
+## C/ Example for Hymenoptera OR prediction
+
+Hymenoptera OR prediction in *genome_file*, with maximum intron size set to 3000, 8 threads used and no 7TM domain prediction :
+
+```bash
+bash ICR_Finder.sh genome_file DB_Hymenoptera_OR/DB_HymenopteraORs_ORs_cdhit70.prot DB_Hymenoptera_OR/DB_HymenopteraORs_ORs_cdhit70.prot DB_Hymenoptera_OR/DB_HymenopteraORs_ORs_GRs.prot DB_Hymenoptera_OR/DB_HymenopteraORs_ORs_GRs.aln Scripts 3000 8 False OR-Receptor
+```
 
 
 ## D/ Launch all genomes in a folder
@@ -154,9 +160,6 @@ commands option "*-minsize*" should be adapted to the minimum size of your targe
 ### ***Parse_exonerate_results* R scripts "*putative protein length*" filters**
 The values need to be tailored to your data. The highest threshold should be slightly lower than the longest proteins known in your target gene family, then decreasing progressively to the minimal values.
 The values and repartition should be found by using the pipeline on a model genome with already known repertory for the target gene family, if possible, to see if most genes are found back by the pipeline when using a set of threshold. 
-This is unfortunately
-
-[TBA]
 
 # V/ Correspondance
 [TBA]
