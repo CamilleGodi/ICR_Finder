@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 ##################################################################
 
 ### CONDA ENVIRONMENT ACTIVATION
@@ -57,7 +58,7 @@ alignment outgroup =       $align_verif_file
 scripts folder location =  $scripts_folder_location
 maximum intron length =    $maximum_intron_length
 number of threads =        $number_of_threads
-7tm domain filter =        $tm_prediction
+7tm domain prediction =    $tm_prediction
 target gene family =       $family
 """
 
@@ -86,8 +87,8 @@ for file in ${files_array[@]} ; do
 	sed 's/ /_/g' "$file" | sed 's/,/_/g' | sed 's/:/_/g' > temp.file ; mv temp.file "$file"
 done
 
-### replace - by underscores in genome only (except in alignment file)
-sed 's/-/_/g' "$genome" > temp.file ; mv temp.file "$genome"
+### replace - by underscores in genome only 
+sed -i 's/-/_/g' "$genome" 
 
 rm -f temp.file # remove temporary file
 
@@ -203,7 +204,7 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 	
 	#add the intron number to vulgar lines 
 	paste -d " " vulgar_lines_parsed.txt intron_numbers.txt > vulgar_lines_intron_numbers.txt
-	
+
 	
 	##Add informations about the best blastp results of each exonerate predicted genes
 
@@ -225,11 +226,10 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 	paste -d " " vulgar_lines_intron_numbers.txt all_blastp_parsed.txt > vulgar_lines_intron_numbers_blastrslt.txt
 	
 	
-	
 	#Parse exonerate results. Find the best exonerate results that are most likely complete genes or pseudogenes, and not overlapping
 	#This R script will also remove genes that are most likely the merge of two real genes (removed if there are more tblastn non-overlapping results than the number of exons predicted by exonerate)
 	Rscript "$scripts_location"/Parse_exonerate_results.R 	#result file : Parsed_exonerate_gene_regions.tsv
-	
+
 
 	#Parse the R result file ...
 	nb_row_parsed_exonerate=$( wc -l < Parsed_exonerate_gene_regions.tsv )
@@ -272,9 +272,9 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 		
 			#extract only the best result if there are two with the same score
 			if [ $( grep -c "Query: " Genes_predictions/$scaffold_s_e_n.exonerate ) -ge 2 ] ; then
-				sed '/^C4 Alignment:/,/^# --- END OF GFF DUMP ---/!d;/^# --- END OF GFF DUMP ---/q'  Genes_predictions/$scaffold_s_e_n.exonerate > first_result_infos
-				sed '/^# --- END OF GFF DUMP ---/,/^C4 Alignment:/!d;/^C4 Alignment:/q'  Genes_predictions/$scaffold_s_e_n.exonerate > first_result_sequence
-				cat first_result_infos first_result_sequence > Genes_predictions/$scaffold_s_e_n.exonerate
+				sed '/^C4 Alignment:/,/^# --- END OF GFF DUMP ---/!d;/^# --- END OF GFF DUMP ---/q'  Genes_predictions/$scaffold_s_e_n.exonerate > first_result_infos.txt
+				sed '/^# --- END OF GFF DUMP ---/,/^C4 Alignment:/!d;/^C4 Alignment:/q'  Genes_predictions/$scaffold_s_e_n.exonerate > first_result_sequence.txt
+				cat first_result_infos.txt first_result_sequence.txt > Genes_predictions/$scaffold_s_e_n.exonerate
 			fi
 
 		done
@@ -311,7 +311,7 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 				second_hit_range=$( grep -m1 "Target range:" $file | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f2 -d " " )
 				
 				#Lets extract CDS if the gene is on the negative strand
-				if [ $strand == "-" ] ; then 
+				if [ "$strand" == "-" ] ; then 
 		
 					#If strand is minus, then the first position is:
 					target_end=$((first_hit_range + 1))
@@ -354,7 +354,7 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 						extracted_scaffold_start=$( echo "$file" | sed 's/.*\///g' | sed 's/.exonerate//g' | sed 's/-/	/g' | cut -f2 )
 						cds_end_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f1 -d " " )
 						cds_start_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f2 -d " " ) 
-						cds_coord_start=$((extracted_scaffold_start + cds_start_extract))
+						cds_coord_start=$((extracted_scaffold_start + cds_start_extract)) ; if [ $cds_coord_start -lt 1 ] ; then cds_coord_start=1 ; fi
 						cds_coord_end=$((extracted_scaffold_start + cds_end_extract - 1))
 						exon_number=$( grep "	exon	" verif_coord.exo | wc -l )
 						sed -i "s/>.*/>$scaffold-$cds_coord_start-$cds_coord_end---$exon_number\_exons/g" Filtered_predictions/$file_name_reduced.ORF
@@ -363,7 +363,7 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 						#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon). This is a bit redundant with the Rscript previously used, but sometime I detect merges here and not in the Rscript....
 						samtools faidx "$genome" $scaffold:$cds_coord_start-$cds_coord_end > Verification_scaffold.fa
 						makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
-						number_blast_hit=$( tblastn -query Filtered_predictions/$file_name_reduced.ORFP -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 30) { print } }' | wc -l )
+						number_blast_hit=$( tblastn -query Filtered_predictions/$file_name_reduced.ORFP -gapextend 32767 -gapopen 32767 -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 15) { print } }' | wc -l )
 						if [ "$number_blast_hit" -gt "$exon_number" ] ; then rm Filtered_predictions/$file_name_reduced.ORF ; fi 
 		
 		
@@ -424,7 +424,7 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 						if [ "$diff_lengths" -le '5000' ] ; then edge_state="TRUE" ; fi #check if its near the end of scaffold
 						
 						#Now check if there are consecutive N near the gene that could indicate conting end
-						extanded_start_coord=$((true_start_coord - 200))
+						extanded_start_coord=$((true_start_coord - 200)) ; if [ $cds_coord_start -lt 1 ] ; then cds_coord_start=1 ; fi
 						extanded_end_coord=$((true_end_coord + 200))
 				
 						#Command below extract the region, put in a single line and count the consecutive number of N (only take the greatest number)
@@ -465,7 +465,7 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 						#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon)
 						samtools faidx "$genome" $scaffold:$true_start_coord-$true_end_coord > Verification_scaffold.fa
 						makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
-						number_blast_hit=$( tblastn -query predicted_cds.prot -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 40) { print } }' | wc -l )
+						number_blast_hit=$( tblastn -query predicted_cds.prot -db Verification_scaffold.fa -gapextend 32767 -gapopen 32767 -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 15) { print } }' | wc -l )
 						if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.PSEU ; fi 
 						if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.CDSP ; fi 
 	
@@ -474,9 +474,9 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 		
 
 				#Lets make the same steps with slight modifications for the + strand
-				elif [ $strand == "+" ] ; then 
+				elif [ "$strand" == "+" ] ; then 
 				
-					#If strand is minus, then the first position is:
+					#If strand is plus, then the first position is:
 					target_end=$((second_hit_range + 1))
 					#And we will went to extend this by 500bp to be sure to have the potentiel start codon
 					target_extanded_end=$((second_hit_range + 500))
@@ -516,7 +516,7 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 						extracted_scaffold_start=$( echo "$file" | sed 's/.*\///g' | sed 's/.exonerate//g' | sed 's/-/	/g' | cut -f2 )
 						cds_start_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f1 -d " " )
 						cds_end_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f2 -d " " )
-						cds_coord_start=$((extracted_scaffold_start + cds_start_extract))
+						cds_coord_start=$((extracted_scaffold_start + cds_start_extract)) ; if [ $cds_coord_start -lt 1 ] ; then cds_coord_start=1 ; fi
 						cds_coord_end=$((extracted_scaffold_start + cds_end_extract - 1))
 						exon_number=$( grep "	exon	" verif_coord.exo | wc -l )
 						sed -i "s/>.*/>$scaffold-$cds_coord_start-$cds_coord_end---$exon_number\_exons/g" Filtered_predictions/$file_name_reduced.ORF
@@ -525,7 +525,7 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 						#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon)
 						samtools faidx "$genome" $scaffold:$cds_coord_start-$cds_coord_end > Verification_scaffold.fa
 						makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
-						number_blast_hit=$( tblastn -query Filtered_predictions/$file_name_reduced.ORFP -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 30) { print } }' | wc -l )
+						number_blast_hit=$( tblastn -query Filtered_predictions/$file_name_reduced.ORFP -gapextend 32767 -gapopen 32767 -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 15) { print } }' | wc -l )
 						if [ "$number_blast_hit" -gt "$exon_number" ] ; then rm Filtered_predictions/$file_name_reduced.ORF ; fi 
 		
 		
@@ -587,7 +587,7 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 						if [ "$diff_lengths" -le '5000' ] ; then edge_state="TRUE" ; fi #check if its near the end of scaffold
 						
 						#Now check if there are consecutive N near the gene that could indicate conting end
-						extanded_start_coord=$((true_start_coord - 200))
+						extanded_start_coord=$((true_start_coord - 200)) ; if [ $cds_coord_start -lt 1 ] ; then cds_coord_start=1 ; fi
 						extanded_end_coord=$((true_end_coord + 200))
 				
 						#Command below extract the region, put in a single line and count the consecutive number of N (only take the greatest number)
@@ -624,7 +624,7 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 						#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon)
 						samtools faidx "$genome" $scaffold:$true_start_coord-$true_end_coord > Verification_scaffold.fa
 						makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
-						number_blast_hit=$( tblastn -query predicted_cds.prot -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 40) { print } }' |  wc -l )
+						number_blast_hit=$( tblastn -query predicted_cds.prot -db Verification_scaffold.fa -gapextend 32767 -gapopen 32767 -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 15) { print } }' |  wc -l )
 						if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.PSEU ; fi 
 						if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.CDSP ; fi 
 	
@@ -659,12 +659,23 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 	
 	current_nb_sequences=$( if test -f "Potential_multiple_exon_CDS.fa" ; then grep -c ">" Potential_multiple_exon_CDS.fa ; else echo "0" ; fi )
 	
+
+	### Add genes found in the first loop to the database (only if genes were found)
+
+	if [ "$current_nb_sequences" -ge 1 ] ; then
+		rm -f Exonerate_split_db/Potential_multiple_exon_CDS.prot* 
+		transeq Potential_multiple_exon_CDS.fa Potential_multiple_exon_CDS.prot
+		sed -i 's/_1$//g' Potential_multiple_exon_CDS.prot
+		"$scripts_location"/exonerate-2.2.0-x86_64/bin/fastasplit -f Potential_multiple_exon_CDS.prot -c 10 --output Exonerate_split_db
+	fi
+
+	
 	#re-process blast result to find potential target regions exclusing already found genes
 	Rscript "$scripts_location"/Rscript_merge_filter_extend_blast_hit_Second.R $maximum_intron_length
 
 	rm -rf Filtered_predictions/
 	rm -rf Genes_predictions/
-	rm Parsed_exonerate_gene_regions.tsv
+	rm -f Parsed_exonerate_gene_regions.tsv
 	
 	if test -f "Potential_target_regions.tsv" ; then number_regions_blast=$( grep "[0-9]" Potential_target_regions.tsv | wc -l ) ; else number_regions_blast=0 ; fi
 	
@@ -674,11 +685,477 @@ while [ "$current_nb_sequences" -gt "$previous_iteration_nb_sequences" ] && [ "$
 
 done
 
-cp Coordinates_already_examined.tsv Coordinates_already_examined_after_while_loop.tsv
 
-rm -rf Exonerate_split_db
 rm -rf Genes_predictions/
 rm -f Parsed_exonerate_gene_regions.tsv
+
+
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+################## Last "loop", this time with less stringency on tblastn/number of exons  ################################################
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+
+
+loop_nb=$(( $loop_nb + 1))
+echo """
+############## One last loop with less stringency on tblastn ##################
+"""
+
+Rscript "$scripts_location"/Parse_exonerate_results_second_bis.R
+
+
+#Parse the R result file ...
+nb_row_parsed_exonerate=$( wc -l < Parsed_exonerate_gene_regions.tsv )
+if [ "$nb_row_parsed_exonerate" -gt "0" ] ; then
+
+	IFS=$'\n'
+	
+	for line in $( cat Parsed_exonerate_gene_regions.tsv ) ; do
+		
+		query=$( echo "$line" | cut -f7 )
+		scaffold=$( echo "$line" | cut -f1 )
+		scaff_start=$( echo "$line" | cut -f2 )
+		scaff_end=$( echo "$line" | cut -f3 )
+	
+		echo "$scaffold:$scaff_start-$scaff_end	$query"
+	
+	done > Correct_coordinates_for_exonerate.tsv
+
+	#Let's now predict genes more precisely on these regions !
+	IFS=$'\n'
+	mkdir -p Genes_predictions
+	
+	for line in $( cat Correct_coordinates_for_exonerate.tsv ) ; do 
+		
+		scaffold_s_e=$( echo "$line" | cut -f1 )
+		best_query=$( echo "$line" | cut -f2 )
+		scaffold_s_e_n=$( echo "$line" | cut -f1 | sed 's/:/-/g' )
+	
+		samtools faidx "$genome" $scaffold_s_e > scaffold.fa
+		sed -i 's/:/-/g' scaffold.fa
+
+		#cat "$target_database_full" 
+		samtools faidx "$target_database_full" $best_query > query.prot
+
+		{
+		"$scripts_location"/exonerate-2.2.0-x86_64/bin/exonerate -E True --verbose 0 --showtargetgff TRUE --model protein2genome --minintron 50 --maxintron $maximum_intron_length --ryo "%tcs" --bestn 1 query.prot scaffold.fa > Genes_predictions/$scaffold_s_e_n.exonerate
+		} &> /dev/null
+
+		cp scaffold.fa Genes_predictions/$scaffold_s_e_n.fasta
+	
+	
+		#extract only the best result if there are two with the same score
+		if [ $( grep -c "Query: " Genes_predictions/$scaffold_s_e_n.exonerate ) -ge 2 ] ; then
+			sed '/^C4 Alignment:/,/^# --- END OF GFF DUMP ---/!d;/^# --- END OF GFF DUMP ---/q'  Genes_predictions/$scaffold_s_e_n.exonerate > first_result_infos.txt
+			sed '/^# --- END OF GFF DUMP ---/,/^C4 Alignment:/!d;/^C4 Alignment:/q'  Genes_predictions/$scaffold_s_e_n.exonerate > first_result_sequence.txt
+			cat first_result_infos.txt first_result_sequence.txt > Genes_predictions/$scaffold_s_e_n.exonerate
+		fi
+
+	done
+	
+	
+	### Now we will extract coding sequences from exonerate files. We will define if predicted genes are functionnal or pseudogene ###
+	
+	#Result folder
+	mkdir -p Filtered_predictions	
+	
+	for file in Genes_predictions/*.exonerate ; do
+
+		#extract some infos from file name
+		file_name=$( echo "$file" | sed 's/.*\///g' )
+		file_name_reduced=$( echo "$file" | sed 's/.*\///g' | sed 's/.exonerate//g' )
+		fasta_file_name=$( echo "$file_name" | sed 's/exonerate/fasta/g' )
+		initial_header=$( grep ">" Genes_predictions/$fasta_file_name | sed 's/>//g' )
+	
+		#Test if the predicted gene is a target gene or not
+		awk '/# --- END OF GFF DUMP ---/ {p=1}; p; /C4 Alignment:/ {p=0}' $file | grep -v "^-- completed" | grep -v "C4 Align" | grep -v "END OF GFF" | sed "s/#/>predicted_cds/g"  > predicted_cds.fa
+		transeq predicted_cds.fa predicted_cds.prot &> /dev/null
+		blastp -query predicted_cds.prot -db "$extended_database" -evalue 1e-5 -outfmt "6 qseqid sseqid sscinames scomnames pident length mismatch gapopen qstart qend sstart send evalue stitle sblastnames sgi sacc" -out blastp_result -max_target_seqs 1 -num_threads $number_of_threads &> /dev/null
+		
+		#Lets continue only if the best match is an target
+		if grep -q "$family" blastp_result ; then
+	
+			#Define the scaffold  name
+			scaffold=$( echo "$file" | sed 's/.*\///g' | sed 's/-.*//g' )
+			#Define the strand on which the predicted gene is
+			strand=$( grep "	similarity	" $file | cut -f7 )
+			#Define the first position of the query on the target sequence
+			first_hit_range=$( grep -m1 "Target range:" $file | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f1 -d " " )
+			#Define the last position of the query on the target sequence
+			second_hit_range=$( grep -m1 "Target range:" $file | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f2 -d " " )
+			
+			#Lets extract CDS if the gene is on the negative strand
+			if [ "$strand" == "-" ] ; then 
+	
+				#If strand is minus, then the first position is:
+				target_end=$((first_hit_range + 1))
+				#And we will went to extend this by 500bp to be sure to have the potentiel start codon
+				target_extanded_end=$((first_hit_range + 500))
+			
+				#Extract 500bp downstream and extract the whole current scaffold fasta file untill the start
+				samtools faidx Genes_predictions/$fasta_file_name $initial_header:$target_end-$target_extanded_end > Extend_three_prime.fa
+				samtools faidx Genes_predictions/$fasta_file_name $initial_header:1-$second_hit_range > Extend_five_prime.fa
+			
+				#remove fasta header of extanded region files
+				grep -v ">" Extend_three_prime.fa | tr -d '\n' | sed 's/NNN//g' > Extend_three_prime.txt
+				grep -v ">" Extend_five_prime.fa | tr -d '\n' | sed 's/NNN//g' > Extend_five_prime.txt
+			
+				#Extract the target sequence corresponding to the CDS predicted by exonerate and revseq, and remove fasta header
+				grep "	exon	"  $file | cut -f3,4,5 | sort -n -k2 > target_seq.tsv
+				for exons in $( cat target_seq.tsv ) ; do begin_exon=$( echo "$exons" | cut -f2 ) ; end_exon=$( echo "$exons" | cut -f3) ; samtools faidx Genes_predictions/$fasta_file_name $initial_header:$begin_exon-$end_exon >> Correct_cds.fa ; done
+				grep -v ">" Correct_cds.fa > predicted_cds_rev.txt ; rm Correct_cds.fa 
+	
+			
+				#Merge the three regions files, add a fasta header and then search for an ORF with the same parameters we used for single exon genes
+				cat Extend_five_prime.txt predicted_cds_rev.txt Extend_three_prime.txt > Complete_extanded_sequence.fa
+				sed -i '1 i\>Complete_seq' Complete_extanded_sequence.fa
+				getorf -sequence Complete_extanded_sequence.fa -outseq Filtered_predictions/$file_name_reduced.ORF -minsize $getorf_minsize -find 3 &> /dev/null
+				if grep -q -i "reverse" Filtered_predictions/$file_name_reduced.ORF ; then sequence_to_grep=$( grep -i "reverse" Filtered_predictions/$file_name_reduced.ORF | sed 's/>//g' | sed 's/ .*//g' ) ; samtools faidx Filtered_predictions/$file_name_reduced.ORF $sequence_to_grep > temporary ; mv temporary Filtered_predictions/$file_name_reduced.ORF ; rm Filtered_predictions/$file_name_reduced.ORF.fai ; else rm Filtered_predictions/$file_name_reduced.ORF ; echo "bad strand" > Filtered_predictions/$file_name_reduced.ORF ; fi
+			
+	
+				#Rename the fasta file
+				if [ $( grep -c ">" Filtered_predictions/$file_name_reduced.ORF ) -ge 1 ] ; then
+			
+					transeq Filtered_predictions/$file_name_reduced.ORF Filtered_predictions/$file_name_reduced.ORFP &> /dev/null
+					
+					{
+					"$scripts_location"/exonerate-2.2.0-x86_64/bin/exonerate -E True --verbose 0 --model protein2genome:bestfit --bestn 1 --showtargetgff TRUE Filtered_predictions/$file_name_reduced.ORFP Genes_predictions/$fasta_file_name > verif_coord.exo
+					} &> /dev/null
+
+					if grep -q "Query range:" verif_coord.exo ; then echo "No segmentation default" ; else "$scripts_location"/exonerate-2.2.0-x86_64/bin/exonerate --model protein2genome --bestn 1 --showtargetgff TRUE Filtered_predictions/$file_name_reduced.ORFP Genes_predictions/$fasta_file_name > verif_coord.exo ; fi
+
+
+					extracted_scaffold_start=$( echo "$file" | sed 's/.*\///g' | sed 's/.exonerate//g' | sed 's/-/	/g' | cut -f2 )
+					cds_end_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f1 -d " " )
+					cds_start_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f2 -d " " ) 
+					cds_coord_start=$((extracted_scaffold_start + cds_start_extract))
+					cds_coord_end=$((extracted_scaffold_start + cds_end_extract - 1))
+					exon_number=$( grep "	exon	" verif_coord.exo | wc -l )
+					sed -i "s/>.*/>$scaffold-$cds_coord_start-$cds_coord_end---$exon_number\_exons/g" Filtered_predictions/$file_name_reduced.ORF
+			
+	
+					#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon). This is a bit redundant with the Rscript previously used, but sometime I detect merges here and not in the Rscript....
+					samtools faidx "$genome" $scaffold:$cds_coord_start-$cds_coord_end > Verification_scaffold.fa
+					makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
+					number_blast_hit=$( tblastn -query Filtered_predictions/$file_name_reduced.ORFP -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 30) { print } }' | wc -l )
+					if [ "$number_blast_hit" -gt "$exon_number" ] ; then rm Filtered_predictions/$file_name_reduced.ORF ; fi 
+	
+	
+				#If not ORF found, then determinate the gene state
+				elif [ $( grep -c ">" Filtered_predictions/$file_name_reduced.ORF ) -lt 1 ] ; then 
+			
+					stop_codon_state="FALSE"
+					edge_state="FALSE"
+					frameshift_state="FALSE"
+			
+					##Stop codon checking
+			
+					#lets check for the presence of premature stop codons. We will count the number of predicted stop 5percent before the true end position of the query
+					transeq predicted_cds.fa predicted_cds.prot &> /dev/null
+			
+					#Estimate the interval on which we will search stop codons. 
+					query_name=$( grep "Query: " $file | sed 's/.*Query: //g' )
+					query_total_length=$( grep -m1 "$query_name" "$target_database_full".fai | cut -f2 )
+					query_start_position=$( grep "Query range: " $file | sed 's/^ *//g' | sed 's/Query range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f1 -d " " )
+					five_percent_position=$((query_total_length * 95 / 100 - query_start_position))
+			
+					#Lets see if we find stop codon before the five_percent_position
+					stop_codon_nb=$( grep -v ">" predicted_cds.prot | fold -w1 | grep -n "\*" | sed 's/:.*//g' | awk -v myvar=$five_percent_position 'BEGIN{FS="\t";OFS="\t"}($1<=myvar){print $1}' | wc -l ) #number of stop codons before the ten percent pos
+			
+					if [ "$stop_codon_nb" -ge '1' ] ; then stop_codon_state="TRUE" ; fi
+			
+			
+					##Frameshift checking
+			
+					#To search for frameshifts, start by removing spurious exons at the border. They are most probably true for functionnal genes, and most of the time bad for pseudogenes
+					#We remove border exons if there are less than 60nt in length. Run as iteration.
+					grep "	exon	" $file | cut -f4,5,9 | awk 'BEGIN{FS="\t";OFS="\t"}{{$4=$2-$1} print; }' > Exons_length.txt
+					awk 'BEGIN{FS="\t";OFS="\t"}($4>60){print;}' Exons_length.txt > Correct_exons.txt
+			
+					#Check for the presence of frameshift
+					frameshift_nb=$( grep -o "frameshifts [0-9]*" Correct_exons.txt | cut -f2 -d " " | awk '{ sum+=$1} END {print sum}' )
+					if [[ $frameshift_nb == "" ]] ; then frameshift_nb=0 ; fi
+					if [ "$frameshift_nb" -ge '1' ] ; then frameshift_state="TRUE" ; fi
+			
+			
+			
+					##Edge checking
+			
+					#Check if the gene is at a conting border
+					#These borders are either scaffold end or a repeat of "N", usually more than 50 (100 in zebrafish assembly for example)
+					gene_start_coord=$( cut -f1 Correct_exons.txt | sort -n | head -1 )
+					gene_end_coord=$( cut -f2 Correct_exons.txt | sort -n | tail -1 )
+			
+					extracted_scaffold_start=$( grep ">" Genes_predictions/$fasta_file_name | sed 's/>//g' | sed 's/-/	/g' | cut -f2 )
+			
+					true_start_coord=$((extracted_scaffold_start + gene_start_coord))
+					true_end_coord=$((extracted_scaffold_start + gene_end_coord))
+			
+					#First check if these coordinates are near the end of scaffolds (<5000 bp)
+					if [ "$true_start_coord" -le '5000' ] ; then edge_state="TRUE" ; fi #check if its near the start of scaffold
+					scaffold_length=$( grep -m1 "^$scaffold	" "$genome".fai | cut -f2 ) #extract scaffold length from .fai file
+					diff_lengths=$((scaffold_length - true_end_coord))
+					if [ "$diff_lengths" -le '5000' ] ; then edge_state="TRUE" ; fi #check if its near the end of scaffold
+					
+					#Now check if there are consecutive N near the gene that could indicate conting end
+					extanded_start_coord=$((true_start_coord - 200))
+					extanded_end_coord=$((true_end_coord + 200))
+			
+					#Command below extract the region, put in a single line and count the consecutive number of N (only take the greatest number)
+					consecutive_N_nb=$( samtools faidx "$genome" $scaffold:$extanded_start_coord-$extanded_end_coord | sed 's/n/N/g' | grep -v ">" | awk '/^>/ {printf("\n%s\n",$0);next; } { printf("%s",$0);}  END {printf("\n");}' | grep N | awk -F '[^N]+' '{for (i=1; i<=NF; i++) if ($i != "") print length($i)}' | sort -n | tail -1 )
+					if [[ $consecutive_N_nb == "" ]] ; then consecutive_N_nb=0 ; fi
+					if [ "$consecutive_N_nb" -ge '50' ] ; then edge_state="TRUE" ; fi 
+			
+			
+					##Extract the sequence
+			
+					rm -f Current_exon_rev.txt
+			
+					#Extract the corresponding sequence
+					for line in $( cat Correct_exons.txt ) ; do
+
+						start_pos=$( echo "$line" | cut -f1 )
+						end_pos=$( echo "$line" | cut -f2 )
+			
+						samtools faidx Genes_predictions/$fasta_file_name $initial_header:$start_pos-$end_pos > Current_exon.fa
+						revseq Current_exon.fa Current_exon_rev.fa
+			
+						#add the reversed sequence to a text file
+						grep -v ">" Current_exon_rev.fa >> Current_exon_rev.txt
+			
+					done
+			
+					#add a header to the text file containing our sequence with the number of exon + frameshift/stopcodon/truncated/edge 
+					exon_nb=$( wc -l Exons_length.txt | sed 's/ .*//g' )
+			
+					header_name=$( echo "$scaffold-$true_start_coord-$true_end_coord---$exon_nb exons-$edge_state-$stop_codon_state-$frameshift_state" | sed 's/ /_/g' )
+					sed -e "1i>$header_name\\" Current_exon_rev.txt > Filtered_predictions/$file_name_reduced.PSEU
+					sed -i '/^[[:space:]]*$/d' Filtered_predictions/$file_name_reduced.PSEU
+					cat predicted_cds.prot > Filtered_predictions/$file_name_reduced.CDSP
+					sed -i "s/>.*/>$header_name/g" Filtered_predictions/$file_name_reduced.CDSP
+
+
+
+					#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon)
+					samtools faidx "$genome" $scaffold:$true_start_coord-$true_end_coord > Verification_scaffold.fa
+					makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
+					number_blast_hit=$( tblastn -query predicted_cds.prot -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 30) { print } }' | wc -l )
+					if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.PSEU ; fi 
+					if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.CDSP ; fi 
+
+			
+				fi
+	
+
+			#Lets make the same steps with slight modifications for the + strand
+			elif [ "$strand" == "+" ] ; then 
+			
+				#If strand is plus, then the first position is:
+				target_end=$((second_hit_range + 1))
+				#And we will went to extend this by 500bp to be sure to have the potentiel start codon
+				target_extanded_end=$((second_hit_range + 500))
+			
+				#Extract 500bp downstream and extract the whole current scaffold fasta file untill the start
+				samtools faidx Genes_predictions/$fasta_file_name $initial_header:1-$first_hit_range > Extend_three_prime.fa
+				samtools faidx Genes_predictions/$fasta_file_name $initial_header:$target_end-$target_extanded_end > Extend_five_prime.fa
+			
+				#remove fasta header of extanded region files
+				grep -v ">" Extend_three_prime.fa | tr -d '\n' | sed 's/NNN//g' > Extend_three_prime.txt
+				grep -v ">" Extend_five_prime.fa | tr -d '\n' | sed 's/NNN//g' > Extend_five_prime.txt
+			
+				#Extract the CDS sequence predicted by exonerate and remove fasta header
+	
+				grep "	exon	"  $file | cut -f3,4,5 | sort -n -k2 > target_seq.tsv
+				for exons in $( cat target_seq.tsv ) ; do begin_exon=$( echo "$exons" | cut -f2 ) ; end_exon=$( echo "$exons" | cut -f3 ) ; samtools faidx Genes_predictions/$fasta_file_name $initial_header:$begin_exon-$end_exon >> Correct_cds.fa ; done
+				grep -v ">" Correct_cds.fa > predicted_cds.txt ; rm Correct_cds.fa
+			
+				#Merge the three regions files, add a fasta header and then search for an ORF with the same parameters we used for single exon genes
+				cat Extend_three_prime.txt predicted_cds.txt Extend_five_prime.txt > Complete_extanded_sequence.fa
+				sed -i '1 i\>Complete_seq' Complete_extanded_sequence.fa
+				getorf -sequence Complete_extanded_sequence.fa -outseq Filtered_predictions/$file_name_reduced.ORF -minsize $getorf_minsize -find 3 -reverse FALSE &> /dev/null
+			
+			
+				#Rename the fasta file 
+				if [ $( grep -c ">" Filtered_predictions/$file_name_reduced.ORF ) -ge 1 ] ; then
+			
+					transeq Filtered_predictions/$file_name_reduced.ORF Filtered_predictions/$file_name_reduced.ORFP &> /dev/null
+
+					{
+					"$scripts_location"/exonerate-2.2.0-x86_64/bin/exonerate -E --verbose 0 --model protein2genome:bestfit --bestn 1 --showtargetgff TRUE Filtered_predictions/$file_name_reduced.ORFP Genes_predictions/$fasta_file_name > verif_coord.exo
+					} &> /dev/null
+
+					if grep -q "Query range:" verif_coord.exo ; then echo "No segmentation default" ; else "$scripts_location"/exonerate-2.2.0-x86_64/bin/exonerate --model protein2genome --bestn 1 --showtargetgff TRUE Filtered_predictions/$file_name_reduced.ORFP Genes_predictions/$fasta_file_name > verif_coord.exo ; fi
+
+
+					extracted_scaffold_start=$( echo "$file" | sed 's/.*\///g' | sed 's/.exonerate//g' | sed 's/-/	/g' | cut -f2 )
+					cds_start_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f1 -d " " )
+					cds_end_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f2 -d " " )
+					cds_coord_start=$((extracted_scaffold_start + cds_start_extract))
+					cds_coord_end=$((extracted_scaffold_start + cds_end_extract - 1))
+					exon_number=$( grep "	exon	" verif_coord.exo | wc -l )
+					sed -i "s/>.*/>$scaffold-$cds_coord_start-$cds_coord_end---$exon_number\_exons/g" Filtered_predictions/$file_name_reduced.ORF
+				
+	
+					#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon)
+					samtools faidx "$genome" $scaffold:$cds_coord_start-$cds_coord_end > Verification_scaffold.fa
+					makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
+					number_blast_hit=$( tblastn -query Filtered_predictions/$file_name_reduced.ORFP -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 30) { print } }' | wc -l )
+					if [ "$number_blast_hit" -gt "$exon_number" ] ; then rm Filtered_predictions/$file_name_reduced.ORF ; fi 
+	
+	
+				#If not ORF found, then determinate the gene state
+			
+				elif [ $( grep -c ">" Filtered_predictions/$file_name_reduced.ORF ) -lt 1 ] ; then 
+			
+					stop_codon_state="FALSE"
+					edge_state="FALSE"
+					frameshift_state="FALSE"
+			
+				##Stop codon checking
+			
+					#lets check for the presence of premature stop codons. We will count the number of predicted stop 5percent before the true end position of the query
+					transeq predicted_cds.fa predicted_cds.prot &> /dev/null
+			
+					#Estimate the interval on which we wil search stop codons. 
+					query_name=$( grep "Query: " $file | sed 's/.*Query: //g' )
+					query_total_length=$( grep -m1 "$query_name" "$target_database_full".fai | cut -f2 )
+					query_start_position=$( grep "Query range: " $file | sed 's/^ *//g' | sed 's/Query range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f1 -d " " )
+					five_percent_position=$((query_total_length * 95 / 100 - query_start_position))
+			
+					#Lets see if we find stop codon before the five_percent_position
+					stop_codon_nb=$( grep -v ">" predicted_cds.prot | fold -w1 | grep -n "\*" | sed 's/:.*//g' | awk -v myvar=$five_percent_position 'BEGIN{FS="\t";OFS="\t"}($1<=myvar){print $1}' | wc -l ) #number of stop codons before the ten percent pos
+			
+					if [ "$stop_codon_nb" -ge '1' ] ; then stop_codon_state="TRUE" ; fi
+			
+			
+					##Frameshift checking
+			
+					#To search for frameshifts, start by removing spurious exons at the border. They are most probably true for functionnal genes, and most of the time bad for pseudogenes
+					#We remove border exons if there are less than 60nt in length. Run as iteration.
+			
+					grep "	exon	" $file | cut -f4,5,9 | awk 'BEGIN{FS="\t";OFS="\t"}{{$4=$2-$1} print; }' > Exons_length.txt
+					awk 'BEGIN{FS="\t";OFS="\t"}($4>60){print;}' Exons_length.txt > Correct_exons.txt
+			
+					#Check for the presence of frameshift
+					frameshift_nb=$( grep -o "frameshifts [0-9]*" Correct_exons.txt | cut -f2 -d " " | awk '{ sum+=$1} END {print sum}' )
+					if [[ $frameshift_nb == "" ]] ; then frameshift_nb=0 ; fi
+					if [ "$frameshift_nb" -ge '1' ] ; then frameshift_state="TRUE" ; fi
+			
+			
+					##Edge checking
+			
+					#Check if the gene is at a conting border
+					#These borders are either scaffold end or a repeat of "N", usually more than 50 (100 in zebrafish assembly for example)
+					gene_start_coord=$( cut -f1 Correct_exons.txt | sort -n | head -1 )
+					gene_end_coord=$( cut -f2 Correct_exons.txt | sort -n | tail -1 )
+			
+					extracted_scaffold_start=$( grep ">" Genes_predictions/$fasta_file_name | sed 's/>//g' | sed 's/-/	/g' | cut -f2 )
+			
+					true_start_coord=$((extracted_scaffold_start + gene_start_coord))
+					true_end_coord=$((extracted_scaffold_start + gene_end_coord))
+			
+					#First check if these coordinates are near the end of scaffolds (<5000 bp)
+					if [ "$true_start_coord" -le '5000' ] ; then edge_state="TRUE" ; fi #check if its near the start of scaffold
+					scaffold_length=$( grep -m1 "^$scaffold	" "$genome".fai | cut -f2 ) #extract scaffold length from .fai file
+					diff_lengths=$((scaffold_length - true_end_coord))
+					if [ "$diff_lengths" -le '5000' ] ; then edge_state="TRUE" ; fi #check if its near the end of scaffold
+					
+					#Now check if there are consecutive N near the gene that could indicate conting end
+					extanded_start_coord=$((true_start_coord - 200))
+					extanded_end_coord=$((true_end_coord + 200))
+			
+					#Command below extract the region, put in a single line and count the consecutive number of N (only take the greatest number)
+					consecutive_N_nb=$( samtools faidx "$genome" $scaffold:$extanded_start_coord-$extanded_end_coord | sed 's/n/N/g' | grep -v ">" | awk '/^>/ {printf("\n%s\n",$0);next; } { printf("%s",$0);}  END {printf("\n");}' | grep N | awk -F '[^N]+' '{for (i=1; i<=NF; i++) if ($i != "") print length($i)}' | sort -n | tail -1 )
+					if [[ $consecutive_N_nb == "" ]] ; then consecutive_N_nb=0 ; fi
+					if [ "$consecutive_N_nb" -ge '50' ] ; then edge_state="TRUE" ; fi 
+			
+			
+					##Extract the sequence
+			
+					rm -f Current_exon.txt
+					#Extract the corresponding sequence
+					for line in $( cat Correct_exons.txt ) ; do
+					
+						start_pos=$( echo "$line" | cut -f1 )
+						end_pos=$( echo "$line" | cut -f2 )
+			
+						samtools faidx Genes_predictions/$fasta_file_name $initial_header:$start_pos-$end_pos > Current_exon.fa
+			
+						#add the reversed sequence to a text file
+						grep -v ">" Current_exon.fa >> Current_exon.txt
+			
+					done
+			
+					#add a header to the text file containing our sequence with the number of exon + frameshift/stopcodon/truncated/edge 
+					exon_nb=$( wc -l Exons_length.txt | sed 's/ .*//g' )
+			
+					header_name=$( echo "$scaffold-$true_start_coord-$true_end_coord---$exon_nb exons-$edge_state-$stop_codon_state-$frameshift_state" | sed 's/ /_/g' )
+					sed -e "1i>$header_name\\" Current_exon.txt > Filtered_predictions/$file_name_reduced.PSEU
+					sed -i '/^[[:space:]]*$/d' Filtered_predictions/$file_name_reduced.PSEU
+					cat predicted_cds.prot > Filtered_predictions/$file_name_reduced.CDSP
+					sed -i "s/>.*/>$header_name/g" Filtered_predictions/$file_name_reduced.CDSP
+
+					#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon)
+					samtools faidx "$genome" $scaffold:$true_start_coord-$true_end_coord > Verification_scaffold.fa
+					makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
+					number_blast_hit=$( tblastn -query predicted_cds.prot -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 30) { print } }' |  wc -l )
+					if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.PSEU ; fi 
+					if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.CDSP ; fi 
+
+				fi
+
+			fi
+	
+		else echo "$initial_header" >> No_target_genes_coordinates.txt
+	
+		fi
+	
+	done
+fi
+
+
+#Now that we have filtered all our results, we can concatenate the results
+for file in Filtered_predictions/*.ORF ; do if grep -q ">" $file ; then i=1 ; else rm $file ; fi ; done #supress files not containg cds
+
+cat Filtered_predictions/*.ORF >> Potential_multiple_exon_CDS.fa #concatenate results of proper CDS
+awk '/^>/{f=!d[$1];d[$1]=1}f' Potential_multiple_exon_CDS.fa > non_redundant.fa ; mv non_redundant.fa Potential_multiple_exon_CDS.fa #removes redundant sequences from Potential_multiple_exon_CDS.fa 
+
+cat Filtered_predictions/*.PSEU >> Pseudogenes_multiple_exon.fa #concatenate results of pseudo/edge...
+
+cat Filtered_predictions/*.CDSP >> Frameshift_less_Pseudogenes.fa
+
+
+#Extract coordinates of found genes
+grep ">" Potential_multiple_exon_CDS.fa | sed 's/>//g' | sed 's/-/	/g' | cut -f1,2,3 >> Coordinates_already_examined.tsv
+grep ">" Pseudogenes_multiple_exon.fa | sed 's/>//g' | sed 's/-/	/g' | cut -f1,2,3 >> Coordinates_already_examined.tsv
+if test -f No_target_genes_coordinates.txt ; then sed 's/-/	/g' No_target_genes_coordinates.txt >> Coordinates_already_examined.tsv ; fi
+if [ $( wc -l < Coordinates_already_examined.tsv ) -lt 1 ] ; then echo "Simulated_scaffold	1	10" >> Coordinates_already_examined.tsv ; fi
+
+current_nb_sequences=$( if test -f "Potential_multiple_exon_CDS.fa" ; then grep -c ">" Potential_multiple_exon_CDS.fa ; else echo "0" ; fi )
+
+
+#re-process blast result to find potential target regions exclusing already found genes
+Rscript "$scripts_location"/Rscript_merge_filter_extend_blast_hit_Second.R $maximum_intron_length
+
+rm -rf Filtered_predictions/
+rm -rf Genes_predictions/
+rm -f Parsed_exonerate_gene_regions.tsv
+
+if test -f "Potential_target_regions.tsv" ; then number_regions_blast=$( grep "[0-9]" Potential_target_regions.tsv | wc -l ) ; else number_regions_blast=0 ; fi
+
+echo """
+Number of potential $family regions after loop $loop_nb : $current_nb_sequences
+Number of potential $family pseudogenes after loop $loop_nb : $( if test -f "Pseudogenes_multiple_exon.fa" ; then grep -c ">" Pseudogenes_multiple_exon.fa ; else echo "0" ; fi ) """
+
+
+cp Coordinates_already_examined.tsv Coordinates_already_examined_after_last_loop.tsv
 
 
 ################################################################################################################################################
@@ -701,6 +1178,7 @@ echo """
 """
 
 Rscript "$scripts_location"/Parse_exonerate_results_second.R
+
 
 # Exonerate_parse function. if argument "pseudogenes" given, doesn't execute the code only necessary for the gene part
 Exonerate_parse () {
@@ -754,7 +1232,6 @@ Exonerate_parse () {
 		
 		### Now we will extract coding sequences from exonerate files. We will define if predicted genes are functionnal or pseudogene ###
 		
-		
 		#Result folder
 		mkdir -p Filtered_predictions	
 		
@@ -773,7 +1250,6 @@ Exonerate_parse () {
 			
 		
 			#Lets continue only if the best match is a target gene
-			#if grep -q -i "olfactory\|odorant" blastp_result ; then 
 			if grep -q "$family" blastp_result ; then
 		
 				#Define the scaffold  name
@@ -786,10 +1262,7 @@ Exonerate_parse () {
 				second_hit_range=$( grep -m1 "Target range:" $file | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f2 -d " " )
 				
 				#Lets extract CDS if the gene is on the negative strand
-				if [ $strand == "-" ] ; then 
-				
-				#file=Genes_predictions/NC_019879.2-28438421-28440954.exonerate 
-		
+				if [ "$strand" == "-" ] ; then 
 		
 					#If strand is minus, then the first position is:
 					target_end=$((first_hit_range + 1))
@@ -830,17 +1303,16 @@ Exonerate_parse () {
 						extracted_scaffold_start=$( echo "$file" | sed 's/.*\///g' | sed 's/.exonerate//g' | sed 's/-/	/g' | cut -f2 )
 						cds_end_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f1 -d " " )
 						cds_start_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f2 -d " " )
-						cds_coord_start=$((extracted_scaffold_start + cds_start_extract))
+						cds_coord_start=$((extracted_scaffold_start + cds_start_extract)) ; if [ $extanded_start_coord -lt 1 ] ; then extanded_start_coord=0 ; fi
 						cds_coord_end=$((extracted_scaffold_start + cds_end_extract - 1))
 						exon_number=$( grep "	exon	" verif_coord.exo | wc -l )
 						sed -i "s/>.*/>$scaffold-$cds_coord_start-$cds_coord_end---$exon_number\_exons/g" Filtered_predictions/$file_name_reduced.ORF
 				
 						if [ "$1" != "pseudogenes" ] ; then
-							echo "check that there were no merge between two genes with a tblastn"
 							#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon)
 							samtools faidx "$genome" $scaffold:$cds_coord_start-$cds_coord_end > Verification_scaffold.fa
 							makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
-							number_blast_hit=$( tblastn -query Filtered_predictions/$file_name_reduced.ORFP -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 30) { print } }' | wc -l )
+							number_blast_hit=$( tblastn -query Filtered_predictions/$file_name_reduced.ORFP -gapextend 32767 -gapopen 32767 -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 15) { print } }' | wc -l )
 							if [ "$number_blast_hit" -gt "$exon_number" ] ; then rm Filtered_predictions/$file_name_reduced.ORF ; fi 
 						fi
 
@@ -901,7 +1373,7 @@ Exonerate_parse () {
 						if [ "$diff_lengths" -le '5000' ] ; then edge_state="TRUE" ; fi #check if its near the end of scaffold
 						
 						#Now check if there are consecutive N near the gene that could indicate conting end
-						extanded_start_coord=$((true_start_coord - 200))
+						extanded_start_coord=$((true_start_coord - 200)) ; if [ $extanded_start_coord -lt 1 ] ; then extanded_start_coord=0 ; fi
 						extanded_end_coord=$((true_end_coord + 200))
 				
 						#Command below extract the region, put in a single line and count the consecutive number of N (only take the greatest number)
@@ -941,7 +1413,7 @@ Exonerate_parse () {
 							#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon)
 							samtools faidx "$genome" $scaffold:$true_start_coord-$true_end_coord > Verification_scaffold.fa
 							makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
-							number_blast_hit=$( tblastn -query predicted_cds.prot -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 40) { print } }' | wc -l )
+							number_blast_hit=$( tblastn -query predicted_cds.prot -db Verification_scaffold.fa -gapextend 32767 -gapopen 32767 -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 15) { print } }' | wc -l )
 							if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.PSEU ; fi 
 							if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.CDSP ; fi
 						fi
@@ -950,9 +1422,9 @@ Exonerate_parse () {
 
 
 				#Lets make the same steps with slight modifications for the + strand
-				elif [ $strand == "+" ] ; then 
+				elif [ "$strand" == "+" ] ; then 
 				
-					#If strand is minus, then the first position is:
+					#If strand is plus, then the first position is:
 					target_end=$((second_hit_range + 1))
 					#And we will went to extend this by 500bp to be sure to have the potentiel start codon
 					target_extanded_end=$((second_hit_range + 500))
@@ -991,7 +1463,7 @@ Exonerate_parse () {
 						extracted_scaffold_start=$( echo "$file" | sed 's/.*\///g' | sed 's/.exonerate//g' | sed 's/-/	/g' | cut -f2 )
 						cds_start_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f1 -d " " )
 						cds_end_extract=$( grep -m1 "Target range:" verif_coord.exo | sed 's/^ *//g' | sed 's/Target range://g' | sed 's/ //g' | sed 's/->/ /g' | cut -f2 -d " " )
-						cds_coord_start=$((extracted_scaffold_start + cds_start_extract))
+						cds_coord_start=$((extracted_scaffold_start + cds_start_extract)) ; if [ $extanded_start_coord -lt 1 ] ; then extanded_start_coord=0 ; fi
 						cds_coord_end=$((extracted_scaffold_start + cds_end_extract - 1))
 						exon_number=$( grep "	exon	" verif_coord.exo | wc -l )
 						sed -i "s/>.*/>$scaffold-$cds_coord_start-$cds_coord_end---$exon_number\_exons/g" Filtered_predictions/$file_name_reduced.ORF
@@ -1001,7 +1473,7 @@ Exonerate_parse () {
 							#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon)
 							samtools faidx "$genome" $scaffold:$cds_coord_start-$cds_coord_end > Verification_scaffold.fa
 							makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
-							number_blast_hit=$( tblastn -query Filtered_predictions/$file_name_reduced.ORFP -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 30) { print } }' | wc -l )
+							number_blast_hit=$( tblastn -query Filtered_predictions/$file_name_reduced.ORFP -gapextend 32767 -gapopen 32767 -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 15) { print } }' | wc -l )
 							if [ "$number_blast_hit" -gt "$exon_number" ] ; then rm Filtered_predictions/$file_name_reduced.ORF ; fi 
 						fi
 		
@@ -1063,7 +1535,7 @@ Exonerate_parse () {
 						if [ "$diff_lengths" -le '5000' ] ; then edge_state="TRUE" ; fi #check if its near the end of scaffold
 						
 						#Now check if there are consecutive N near the gene that could indicate conting end
-						extanded_start_coord=$((true_start_coord - 200))
+						extanded_start_coord=$((true_start_coord - 200)) ; if [ $extanded_start_coord -lt 1 ] ; then extanded_start_coord=0 ; fi
 						extanded_end_coord=$((true_end_coord + 200))
 				
 						#Command below extract the region, put in a single line and count the consecutive number of N (only take the greatest number)
@@ -1101,7 +1573,7 @@ Exonerate_parse () {
 							#check that there were no merge between two genes with a tblastn (number of tblastn hits should be inferior or equal to the number of exon)
 							samtools faidx "$genome" $scaffold:$true_start_coord-$true_end_coord > Verification_scaffold.fa
 							makeblastdb -in Verification_scaffold.fa -dbtype nucl &> /dev/null
-							number_blast_hit=$( tblastn -query predicted_cds.prot -db Verification_scaffold.fa -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 40) { print } }' | wc -l )
+							number_blast_hit=$( tblastn -query predicted_cds.prot -db Verification_scaffold.fa -gapextend 32767 -gapopen 32767 -evalue $blast_Evalue -outfmt 6 | awk '{ if ($4 >= 15) { print } }' | wc -l )
 							if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.PSEU ; fi 
 							if [ "$number_blast_hit" -gt "$exon_nb" ] ; then rm Filtered_predictions/$file_name_reduced.CDSP ; fi
 						fi
@@ -1195,6 +1667,8 @@ Exonerate_parse "pseudogenes"
 echo """
 	Number of potential $family pseudogene regions after this step : $( if test -f "Pseudogenes_multiple_exon.fa" ; then grep -c ">" Pseudogenes_multiple_exon.fa ; else echo "0" ; fi ) """
 
+rm -rf Exonerate_split_db
+
 ################################################################################################################################################
 ################################################################################################################################################
 ################################################################################################################################################
@@ -1277,9 +1751,9 @@ iqtree -s Final_ALL_verification_alignment.aln -st AA -nt $number_of_threads -m 
 
 ### Parse the tree
 # known gene (IDs) of the target family
-grep ">" $target_database_full | sed 's/>//g' > Known_family_genes_id.txt
+grep ">" $align_verif_file | sed 's/>//g' | grep "$family" > Known_family_genes_id.txt
 # known outgroups (IDs) of the target family
-grep ">" $extended_database | grep -v "$family" | sed 's/>//g' > Known_outgroup_genes_id.txt
+grep ">" $align_verif_file | sed 's/>//g' | grep -v "$family" > Known_outgroup_genes_id.txt
 
 Rscript "$scripts_location"/Tree_parser.R #This script keep only genes clustering with known target family genes : Current_species_target.txt
 
@@ -1291,7 +1765,7 @@ xargs samtools faidx Potential_multiple_exon_CDS.fa < target_functionnal.id > Fu
 xargs samtools faidx Pseudogenes_multiple_exon_reformat.fa < target_pseudos.id > Pseudogenes_target_genes.fa
 
 
-## Now lets filter these files : remove ambiguous sequences 
+## Now lets filter these files : remove ambigous sequences 
 awk '/^>/ {printf("%s%s\t",(N>0?"\n":""),$0);N++;next;} {printf("%s",$0);} END {printf("\n");}' Functionnal_target_genes.fa | sed 's/\*$//g' | awk -F '\t'  '!($2 ~ /N/)' | tr "\t" "\n" > clear_Functionnal_target_genes.fa
 awk '/^>/ {printf("%s%s\t",(N>0?"\n":""),$0);N++;next;} {printf("%s",$0);} END {printf("\n");}' Pseudogenes_target_genes.fa | sed 's/\*$//g' | awk -F '\t'  '!($2 ~ /N/)' | tr "\t" "\n" > clear_Pseudogenes_target_genes.fa
 awk '/^>/ {printf("%s%s\t",(N>0?"\n":""),$0);N++;next;} {printf("%s",$0);} END {printf("\n");}' Functionnal_target_genes.fa | sed 's/\*$//g' | awk -F '\t'  '($2 ~ /N/)' | tr "\t" "\n" > unclear_Functionnal_target_genes.fa
@@ -1369,13 +1843,13 @@ if ( [ $tm_prediction == "True" ] || [ $tm_prediction == "TRUE" ] ) ; then
 fi
 
 # If two genes/pseudogenes are overlapping due to the multiple extensions, then keep only the longest found gene/pseudogene
-awk '/^>/ {printf("%s%s\t",(N>0?"\n":""),$0);N++;next;} {printf("%s",$0);} END {printf("\n");}' Ambiguous_target.fa | sort -t $'\t' -k1,1 -u | tr "\t" "\n" > FINAL_Ambiguous.fa
+awk '/^>/ {printf("%s%s\t",(N>0?"\n":""),$0);N++;next;} {printf("%s",$0);} END {printf("\n");}' Ambiguous_target.fa | sort -t $'\t' -k1,1 -u | tr "\t" "\n" > Ambiguous_target_genes_uniq.fa
 awk '/^>/ {printf("%s%s\t",(N>0?"\n":""),$0);N++;next;} {printf("%s",$0);} END {printf("\n");}' clear_Pseudogenes_target_genes.fa | sort -t $'\t' -k1,1 -u | tr "\t" "\n" > clear_Pseudogenes_target_genes_uniq.fa
 awk '/^>/ {printf("%s%s\t",(N>0?"\n":""),$0);N++;next;} {printf("%s",$0);} END {printf("\n");}' clear_Functionnal_target_genes.fa | sort -t $'\t' -k1,1 -u | tr "\t" "\n" > clear_Functionnal_target_genes_uniq.fa
 
-nb_seq=$( grep -c ">" FINAL_Ambiguous.fa )
+nb_seq=$( grep -c ">" Ambiguous_target_genes_uniq.fa )
 if [ "$nb_seq" -gt "0" ] ; then
-	grep ">" FINAL_Ambiguous.fa | sed 's/>//g' | sed 's/-/	/g' | cut -f1,2,3 > Coordinates_ambiguous_final.tsv
+	grep ">" Ambiguous_target_genes_uniq.fa | sed 's/>//g' | sed 's/-/	/g' | cut -f1,2,3 > Coordinates_ambiguous_final.tsv
 fi
 
 nb_seq=$( grep -c ">" clear_Pseudogenes_target_genes_uniq.fa )
@@ -1394,11 +1868,11 @@ Rscript "$scripts_location"/Remove_redundancy.R
 IFS=$'\n'
 
 for line in $( cat best_genes_functionnal.tsv ) ; do scaff=$( echo "$line" | cut -f1 ) ; start=$( echo "$line" | cut -f2 ) ; end=$( echo "$line" | cut -f3 ) ; grep -m1 "$scaff.*$start.*$end" clear_Functionnal_target_genes_uniq.fa | sed 's/>//g' >> functionnal_to_keep.txt ; done
-for line in $( cat best_genes_ambiguous.tsv ) ; do scaff=$( echo "$line" | cut -f1 ) ; start=$( echo "$line" | cut -f2 ) ; end=$( echo "$line" | cut -f3 ) ; grep -m1 "$scaff.*$start.*$end" FINAL_Ambiguous_target_uniq.fa | sed 's/>//g' >> ambiguous_to_keep.txt ; done
+for line in $( cat best_genes_ambiguous.tsv ) ; do scaff=$( echo "$line" | cut -f1 ) ; start=$( echo "$line" | cut -f2 ) ; end=$( echo "$line" | cut -f3 ) ; grep -m1 "$scaff.*$start.*$end" Ambiguous_target_genes_uniq.fa| sed 's/>//g' >> ambiguous_to_keep.txt ; done
 for line in $( cat best_genes_pseudogenes.tsv ) ; do scaff=$( echo "$line" | cut -f1 ) ; start=$( echo "$line" | cut -f2 ) ; end=$( echo "$line" | cut -f3 ) ; grep -m1 "$scaff.*$start.*$end" clear_Pseudogenes_target_genes_uniq.fa | sed 's/>//g' >> pseudogenes_to_keep.txt ; done
 
 if test -f "functionnal_to_keep.txt" ; then xargs samtools faidx clear_Functionnal_target_genes_uniq.fa < functionnal_to_keep.txt > clear_Functionnal_target_genes.fa ; else echo "" > clear_Functionnal_target_genes.fa ; fi 
-if test -f "ambiguous_to_keep.txt" ; then xargs samtools faidx FINAL_Ambiguous_target_uniq.fa < ambiguous_to_keep.txt > FINAL_Ambiguous.fa ; else echo "" > FINAL_Ambiguous.fa ; fi 
+if test -f "ambiguous_to_keep.txt" ; then xargs samtools faidx Ambiguous_target_genes_uniq.fa < ambiguous_to_keep.txt > FINAL_Ambiguous.fa ; else echo "" > FINAL_Ambiguous.fa ; fi 
 if test -f "pseudogenes_to_keep.txt" ; then xargs samtools faidx clear_Pseudogenes_target_genes_uniq.fa < pseudogenes_to_keep.txt > clear_Pseudogenes_target_genes.fa ; else echo "" > clear_Pseudogenes_target_genes.fa ; fi 
 
 
@@ -1433,8 +1907,8 @@ nb_pseudo_filtered=$( if test -f "FINAL_Pseudogenes_and_no_7tm.fa" ; then grep -
 
 nb_ambiguous=$( if test -f "FINAL_Ambiguous.fa" ; then grep -c ">" FINAL_Ambiguous.fa ; else echo 0 ; fi )
 
-nb_truncated=$( if test -f "FINAL_Pseudogenes_no_filter.fa" ; then grep -c "exons-FALSE-FALSE-FALSE" FINAL_Pseudogenes_no_filter.fa ; else echo 0 ; fi )
-nb_edges=$( if test -f "FINAL_Pseudogenes_no_filter.fa" ; then grep -c "exons-TRUE" FINAL_Pseudogenes_no_filter.fa ; else echo 0 ; fi )
+nb_truncated=$( if test -f "FINAL_Functionnal_no_filter.fa" ; then grep -c "exons-FALSE-FALSE-FALSE" FINAL_Functionnal_no_filter.fa ; else echo 0 ; fi )
+nb_edges=$( if test -f "FINAL_Functionnal_no_filter.fa" ; then grep -c "exons-TRUE" FINAL_Functionnal_no_filter.fa ; else echo 0 ; fi )
 nb_stop_fs=$(( $nb_pseudo - $nb_edges - $nb_truncated ))
 
 ### Add line to the results file
@@ -1505,8 +1979,8 @@ for filepath in  "$res_directory"/* ; do filename=$( echo "$filepath" | sed 's/.
 
 
 ### Clean all temporary files
-#rm -f *.txt *.tsv *.fasta *.fa *.id *.blastn *_genes
-#rm -f ALL_* all_* best_* blast* Blast_* clear_* Complete_* Coordinates_* Correct_* Current_* Extend_* Final_* functional_* List_* Potential_* predicted_* Pseudogenes_* renaming_file query.prot Verification_* verif_*
+rm -f *.txt *.tsv *.fasta *.fa *.id *.blastn *_genes
+rm -f ALL_* all_* best_* blast* Blast_* clear_* Complete_* Coordinates_* Correct_* Current_* Extend_* Final_* functional_* List_* Potential_* predicted_* Pseudogenes_* renaming_file query.prot Verification_* verif_*
 
 
 ################################################################################################################################################
@@ -1523,7 +1997,5 @@ for filepath in  "$res_directory"/* ; do filename=$( echo "$filepath" | sed 's/.
 
 #FINAL (main) RESULTS FILES
 #FINAL_Functionnal_no_filter.fa
-#FINAL_Functionnal_7tm.fa
-#FINAL_Pseudogenes_and_no_7tm.fa
 #FINAL_Pseudogenes_no_filter.fa
 #FINAL_Ambiguous.fa
