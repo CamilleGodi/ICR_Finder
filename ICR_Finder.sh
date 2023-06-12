@@ -32,11 +32,12 @@ maximum_intron_length=$7
 number_of_threads=$8
 tm_prediction=$9
 family=${10} # target gene family, CASE SENSITIVE, used in greps to distinguish family gene from outgroups
-exonerate_exhaustive=${11}
+
 
 # In-script variables
 blast_Evalue="1e-4"
 getorf_minsize="1000"
+exonerate_exhaustive="-E"
 
 # Infos on genome
 echo """
