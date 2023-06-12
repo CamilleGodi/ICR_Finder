@@ -162,4 +162,5 @@ The values need to be tailored to your data. The highest threshold should be sli
 The values and repartition should be found by using the pipeline on a model genome with already known repertory for the target gene family, if possible, to see if most genes are found back by the pipeline when using a set of threshold. 
 
 # V/ Correspondance
-[TBA]
+- Camille GODI, Rouen Normandy University (student, Master Degree Internship), camille.godi[at]univ-rouen.fr or camille.godi[at]gmail.com
+- Maxime POLICARPO, Basel University, maxime.policarpo[at]unibas.ch
