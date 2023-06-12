@@ -152,12 +152,12 @@ Predicted genes are categorized as "Ambiguous" when they contain one or more N i
 ## C/ Notes on adaptation to different gene or animal families  
 > The pipeline was only adapted and tested on Hymenoptera OR chemoreceptors, but with the subsequent modifications, it may work for different gene families or animal taxa.
 
-To change in the config file [not implemented yet] :
+To change :
 
-### **getorf** 
+### **getorf** ( in-script variable of ICR_Finder.sh )
 commands option "*-minsize*" should be adapted to the minimum size of your target protein families, in (exonic) nucleotides size
 
-### ***Parse_exonerate_results* R scripts "*putative protein length*" filters**
+### ***Parse_exonerate_results* R scripts "*putative protein length*" filters** 
 The values need to be tailored to your data. The highest threshold should be slightly lower than the longest proteins known in your target gene family, then decreasing progressively to the minimal values.
 The values and repartition should be found by using the pipeline on a model genome with already known repertory for the target gene family, if possible, to see if most genes are found back by the pipeline when using a set of threshold. 
 
