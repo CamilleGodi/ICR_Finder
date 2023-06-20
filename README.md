@@ -71,7 +71,7 @@ with:
 Hymenoptera OR prediction in *genome_file*, with maximum intron size set to 3000, 8 threads used and no 7TM domain prediction :
 
 ```bash
-bash ICR_Finder.sh ~/Bureau/2_Pipeline_versions/Insect_Chemoreceptors_Finder_Apis_test/Am_no_GPCR/Apis_mellifera.fna DB_HymenopteraORs/DB_HymenopteraORs_ORs_cdhit70.prot DB_HymenopteraORs/DB_HymenopteraORs_ORs.prot DB_HymenopteraORs/DB_HymenopteraORs_ORs_GRs.prot DB_HymenopteraORs/DB_HymenopteraORs_ORs_GRs.aln Scripts 3000 8 False OR-Receptor
+bash ICR_Finder.sh genome_file DB_HymenopteraORs/DB_HymenopteraORs_ORs_cdhit70.prot DB_HymenopteraORs/DB_HymenopteraORs_ORs.prot DB_HymenopteraORs/DB_HymenopteraORs_ORs_GRs.prot DB_HymenopteraORs/DB_HymenopteraORs_ORs_GRs.aln Scripts 3000 8 False OR-Receptor
 ```
 
 
