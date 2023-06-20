@@ -143,8 +143,8 @@ Predicted genes are categorized as "Ambiguous" when they contain one or more N i
 - If your genome file contains spaces, commas, dashes and/or colons in the sequence names, this pipeline will automatically replace them by underscores.
 
 ## B/ Notes for building custom databases and alignement files
-- Blast e-value ( in-script variable : "eValueBlast") should be low for large species group , higher for smaller groups, i.e. 1e-4 for Insects and 1e-10 or more for Apis
-- For **alignment_outgroup** : clean alignment of the target family database proteins with outgroups proteins. Alignment should be as clean (outgroups well separated from the target family) as possible and representative proteins (after a cd-hit 70/80 filter for example). This file can be obtained through mafft for example (recommanded options : mafft --localpair --maxiterate 2000 ).
+- Blast e-value (in-script variable : "eValueBlast") should be low for large species group , higher for smaller groups, i.e. 1e-4 for Insects and 1e-10 or more for Apis
+- For **alignment_outgroup** : clean alignment of the target family database proteins with outgroups proteins. Alignment should be as clean (outgroups well separated from the target family) as possible and representative proteins (after a cd-hit 70/80 filter for example). This file can be obtained through mafft for example (recommanded options : mafft --localpair --maxiterate 2000).
 - If your genome file contains dashes in the sequence names, this script will automatically replace them by underscores.
 - If one of your database files contains spaces and/or colons in the sequence names, this script will automatically replace them by underscores.
 - Sequence names should be as unambiguous as possible, with the gene family clearly stated in a distinct manner (ex: OR-Receptor instead of Or/OR), and mention of the species. Use only alphanumeric characters and underscores/dashes.
@@ -154,7 +154,7 @@ Predicted genes are categorized as "Ambiguous" when they contain one or more N i
 
 To change :
 
-### **getorf** ( in-script variable of ICR_Finder.sh )
+### **getorf** (in-script variable of ICR_Finder.sh)
 commands option "*-minsize*" should be adapted to the minimum size of your target protein families, in (exonic) nucleotides size
 
 ### ***Parse_exonerate_results* R scripts "*putative protein length*" filters** 
